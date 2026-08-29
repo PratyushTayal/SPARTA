@@ -4439,7 +4439,7 @@ GameObject:
   - component: {fileID: 2626050100215326670}
   - component: {fileID: 3135129273857860235}
   m_Layer: 5
-  m_Name: WristHUD
+  m_Name: timeline
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
