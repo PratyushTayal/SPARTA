@@ -1,16 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class SineCameraControllerGalaxyMaterials : MonoBehaviour
 {
-
     public new Camera camera;
     public Transform basePivot;
     public Transform farPivot;
     public float scrollSpeed = 10f;
     public float rotationSpeed = 10f;
     public float rotationAmount = 2f;
+
     [Range(10f, 40f)]
     public float maximumAngle = 20f;
 
@@ -30,32 +31,48 @@ public class SineCameraControllerGalaxyMaterials : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetAxis("Mouse ScrollWheel") > 0f)
+        // Mouse scroll
+        float scroll = Mouse.current.scroll.ReadValue().y;
+
+        if (scroll > 0f)
         {
             if (closeFar < 1f)
             {
                 closeFar += 0.1f;
             }
+
             if (closeFar > 1f)
             {
                 closeFar = 1f;
             }
         }
-        else if (Input.GetAxis("Mouse ScrollWheel") < 0f)
+        else if (scroll < 0f)
         {
             if (closeFar > 0f)
             {
                 closeFar -= 0.1f;
             }
+
             if (closeFar < 0f)
             {
                 closeFar = 0f;
             }
         }
-        closeFarLerp = Mathf.Lerp(closeFarLerp, closeFar, Time.deltaTime * scrollSpeed);
-        camera.transform.position = Vector3.Lerp(farPivot.position, basePivot.position, closeFarLerp);
 
-        if (Input.GetMouseButton(0))
+        closeFarLerp = Mathf.Lerp(
+            closeFarLerp,
+            closeFar,
+            Time.deltaTime * scrollSpeed
+        );
+
+        camera.transform.position = Vector3.Lerp(
+            farPivot.position,
+            basePivot.position,
+            closeFarLerp
+        );
+
+        // Left mouse button
+        if (Mouse.current.leftButton.isPressed)
         {
             rotationPossible = true;
         }
@@ -64,20 +81,29 @@ public class SineCameraControllerGalaxyMaterials : MonoBehaviour
             rotationPossible = false;
         }
 
-        if (rotationPossible == true)
+        // Camera rotation
+        if (rotationPossible)
         {
             rotation = gameObject.transform.localRotation;
-            x = rotation.eulerAngles.x + Input.GetAxis("Mouse Y") * rotationAmount;
-            if (x > maximumAngle && x < 180)
+
+            Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+
+            x = rotation.eulerAngles.x + mouseDelta.y * rotationAmount * 0.01f;
+
+            if (x > maximumAngle && x < 180f)
             {
                 x = maximumAngle;
             }
+
             if (x < 340f && x > 180f)
             {
                 x = 340f;
             }
-            y = rotation.eulerAngles.y + Input.GetAxis("Mouse X") * rotationAmount;
+
+            y = rotation.eulerAngles.y + mouseDelta.x * rotationAmount * 0.01f;
+
             mouseAxisToVector.Set(x, y, 0f);
+
             rotation.eulerAngles = mouseAxisToVector;
             gameObject.transform.localRotation = rotation;
         }

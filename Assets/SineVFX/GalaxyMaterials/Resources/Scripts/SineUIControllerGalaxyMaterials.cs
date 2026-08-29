@@ -1,10 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class SineUIControllerGalaxyMaterials : MonoBehaviour
 {
-
     public Transform prefabHolder;
     public CanvasGroup canvasGroup;
 
@@ -29,17 +29,21 @@ public class SineUIControllerGalaxyMaterials : MonoBehaviour
         EnableActive();
     }
 
-    void Update()
+    private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.H))
+        if (Keyboard.current.hKey.wasPressedThisFrame)
         {
             canvasGroup.alpha = 1f - canvasGroup.alpha;
         }
-        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+
+        if (Keyboard.current.dKey.wasPressedThisFrame ||
+            Keyboard.current.rightArrowKey.wasPressedThisFrame)
         {
             ChangeEffect(true);
         }
-        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+
+        if (Keyboard.current.aKey.wasPressedThisFrame ||
+            Keyboard.current.leftArrowKey.wasPressedThisFrame)
         {
             ChangeEffect(false);
         }
@@ -50,23 +54,17 @@ public class SineUIControllerGalaxyMaterials : MonoBehaviour
     {
         for (int i = 0; i < prefabs.Length; i++)
         {
-            if (i == activeNumber)
-            {
-                prefabs[i].gameObject.SetActive(true);
-            }
-            else
-            {
-                prefabs[i].gameObject.SetActive(false);
-            }
+            prefabs[i].gameObject.SetActive(i == activeNumber);
         }
     }
 
     // Change active VFX
     public void ChangeEffect(bool bo)
     {
-        if (bo == true)
+        if (bo)
         {
             activeNumber++;
+
             if (activeNumber == prefabs.Length)
             {
                 activeNumber = 0;
@@ -75,6 +73,7 @@ public class SineUIControllerGalaxyMaterials : MonoBehaviour
         else
         {
             activeNumber--;
+
             if (activeNumber == -1)
             {
                 activeNumber = prefabs.Length - 1;
