@@ -1,7 +1,3 @@
-// NEW FILE — Text_Wrist_Data has been sitting at its default TextMeshPro
-// placeholder text ("New Text") because nothing has ever written to it.
-// This is the missing script.
-
 using UnityEngine;
 using TMPro;
 using OrbitGuard.Managers;
@@ -12,11 +8,7 @@ namespace OrbitGuard.UI
     public class WristHUDController : MonoBehaviour
     {
         public TextMeshProUGUI wristText;
-
-        [Tooltip("Dry mass of the object being maneuvered, kg — used for the fuel cost readout.")]
         public float dryMassKg = 560f;
-
-        private float lastDeltaVMagnitude = -1f;
 
         private void OnEnable()
         {
@@ -37,8 +29,6 @@ namespace OrbitGuard.UI
 
         private void Update()
         {
-            // TCA countdown needs to refresh continuously even when Pc hasn't
-            // changed, so this runs every frame — cheap, single string build.
             Redraw(null);
         }
 

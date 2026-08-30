@@ -11,23 +11,29 @@ namespace OrbitGuard.Interaction
     public class VectorGrabController : MonoBehaviour
     {
         [Header("References")]
-        public OrbitPropagator satelliteOrbitPropagator;
-        public OrbitPropagator debrisOrbitPropagator;
-        public Transform zeroDeltaVAnchor;
+        [Tooltip("The satellite's SimulatedOrbitVisual — this script writes burnOffsetMeters on it.")]
+        public SimulatedOrbitVisual satelliteVisual;
+
         public ThrusterModule thrusterVisual;
 
-        [Header("The Active Conjunction")]
+        [Tooltip("Transform marking the zero-burn rest position for the arrow.")]
+        public Transform zeroDeltaVAnchor;
+
+        [Header("The Active Conjunction — used only for its reportedCollisionProbability baseline")]
         public ConjunctionData activeCdm;
 
         [Header("Tuning")]
         public float metersPerMps = 0.05f;
         public float maxDeltaVPerAxisMps = 2.0f;
 
+        [Tooltip("Same curve ParetoSolver uses: at this Δv magnitude (m/s), Pc reduction saturates (i.e. burning harder than this gives no further benefit in the simplified model).")]
+        public float pcReductionSaturationMps = 2.5f;
+
         private XRGrabInteractable grabInteractable;
         private bool isHeld;
-        private Vector3 currentDeltaVRic; 
+        private Vector3 currentDeltaV;
 
-        public Vector3 CurrentDeltaV => currentDeltaVRic;
+        public Vector3 CurrentDeltaV => currentDeltaV;
 
         private void Awake()
         {
@@ -49,8 +55,6 @@ namespace OrbitGuard.Interaction
         private void OnGrabBegin(SelectEnterEventArgs args)
         {
             isHeld = true;
-            if (TelemetryStateManager.Instance != null)
-                TelemetryStateManager.Instance.BeginCounterfactualExploration();
         }
 
         private void OnGrabEnd(SelectExitEventArgs args)
@@ -60,7 +64,7 @@ namespace OrbitGuard.Interaction
 
         private void Update()
         {
-            if (!isHeld || zeroDeltaVAnchor == null) return;
+            if (!isHeld || zeroDeltaVAnchor == null || satelliteVisual == null) return;
 
             Vector3 displacementMeters = transform.localPosition - zeroDeltaVAnchor.localPosition;
             Vector3 deltaVMps = displacementMeters / Mathf.Max(metersPerMps, 0.001f);
@@ -69,48 +73,24 @@ namespace OrbitGuard.Interaction
             deltaVMps.y = Mathf.Clamp(deltaVMps.y, -maxDeltaVPerAxisMps, maxDeltaVPerAxisMps);
             deltaVMps.z = Mathf.Clamp(deltaVMps.z, -maxDeltaVPerAxisMps, maxDeltaVPerAxisMps);
 
-            currentDeltaVRic = deltaVMps;
-            ApplyToCounterfactualBranch(currentDeltaVRic);
-        }
+            currentDeltaV = deltaVMps;
 
-        private void ApplyToCounterfactualBranch(Vector3 deltaVRic)
-        {
-            var tsm = TelemetryStateManager.Instance;
-            if (tsm == null || satelliteOrbitPropagator == null) return;
+            satelliteVisual.burnOffsetMeters = displacementMeters;
 
-            OrbitalElements baseline = tsm.LiveTelemetry;
-            OrbitalElements updated = ApplyDeltaVApproximation(baseline, deltaVRic);
+            RecomputeSimplifiedRisk(deltaVMps.magnitude);
 
-            tsm.CounterfactualTelemetry = updated;
-            satelliteOrbitPropagator.Initialize(updated); 
-
-            RecomputeRiskLive(updated);
-
-            if (thrusterVisual != null && deltaVRic.magnitude > 0.02f)
+            if (thrusterVisual != null && deltaVMps.magnitude > 0.02f)
                 thrusterVisual.FireThruster();
         }
 
-        private OrbitalElements ApplyDeltaVApproximation(OrbitalElements baseline, Vector3 deltaVRic)
+        private void RecomputeSimplifiedRisk(float deltaVMagnitude)
         {
-            const double radialSensitivity = 8.0;
-            const double inTrackSensitivity = 15.0;
-            const double crossTrackSensitivity = 0.002;
+            if (RiskManager.Instance == null) return;
 
-            OrbitalElements updated = baseline;
-            updated.semiMajorAxis += deltaVRic.x * radialSensitivity + deltaVRic.z * inTrackSensitivity;
-            updated.inclination += deltaVRic.y * crossTrackSensitivity;
-            return updated;
-        }
+            float reductionFactor = 1f - Mathf.Clamp01(deltaVMagnitude / pcReductionSaturationMps);
+            float predictedPc = (float)activeCdm.reportedCollisionProbability * reductionFactor;
 
-        private void RecomputeRiskLive(OrbitalElements updatedPrimaryElements)
-        {
-            if (RiskManager.Instance == null || debrisOrbitPropagator == null) return;
-
-            RiskManager.Instance.RecomputeFromLivePositions(
-                activeCdm,
-                updatedPrimaryElements,
-                debrisOrbitPropagator.currentElements,
-                activeCdm.tcaSeconds);
+            RiskManager.Instance.OnPcUpdated?.Invoke(predictedPc);
         }
     }
 }
