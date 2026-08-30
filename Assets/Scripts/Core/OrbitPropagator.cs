@@ -46,14 +46,15 @@ namespace OrbitGuard.Core
         {
             if (currentElements.semiMajorAxis <= 0) return;
 
-            double t = TimeController.Instance != null ? TimeController.Instance.SimulationTime : currentElements.epoch;
+            // FIX 1: Add the simulation elapsed time to the initial epoch. 
+            // This ensures the math continuously calculates new positions as time ticks forward.
+            double t = TimeController.Instance != null ? (currentElements.epoch + TimeController.Instance.SimulationTime) : currentElements.epoch;
 
-            // THE FIX for "satellite never moves / flies off somewhere":
-            // this line did not exist before. It's what actually places the
-            // object where the math says it should be, every frame.
+            // Update the object's 3D position every frame based on the new time
             transform.localPosition = GetDisplayPosition(currentElements, t);
 
-            DrawOrbit();
+            // FIX 2: DrawOrbit() has been REMOVED from the Update loop!
+            // It is already drawn once in Initialize(). Calling it here caused massive VR lag.
         }
 
         /// <summary>
