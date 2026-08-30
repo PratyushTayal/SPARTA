@@ -21,7 +21,7 @@ namespace OrbitGuard.Managers
         [Header("UI")]
         public VRCommandConsole commandConsole;
 
-        [Header("Interaction Scripts Needing the Active CDM")]
+        [Header("Interaction Scripts")]
         public VectorGrabController vectorGrabController;
         public TimelineScrubberController timelineScrubber;
 
@@ -31,6 +31,10 @@ namespace OrbitGuard.Managers
 
         [Header("Debris Cluster")]
         public DebrisClusterManager debrisClusterManager;
+
+        [Header("New Real-Math Modules")]
+        public OptimalPathVisualizer optimalPathVisualizer;
+        public CollisionOutcomeManager collisionOutcomeManager;
 
         void Start()
         {
@@ -59,11 +63,15 @@ namespace OrbitGuard.Managers
                 if (RiskManager.Instance != null)
                     RiskManager.Instance.EvaluateCurrentRisk(cdmData);
 
-                if (OrbitGuard.AI.ParetoSolver.Instance != null)
-                    OrbitGuard.AI.ParetoSolver.Instance.ComputeParetoFrontier(cdmData, (float)cdmData.object1.massKg);
-
                 OrbitalElements primaryElements = CdmParser.ToOrbitalElements(cdmData.object1, cdmData.tcaSeconds);
                 OrbitalElements secondaryElements = CdmParser.ToOrbitalElements(cdmData.object2, cdmData.tcaSeconds);
+
+                if (OrbitGuard.AI.ParetoSolver.Instance != null)
+                {
+                    var frontier = OrbitGuard.AI.ParetoSolver.Instance.ComputeParetoFrontier(cdmData, (float)cdmData.object1.massKg);
+                    if (optimalPathVisualizer != null)
+                        optimalPathVisualizer.ShowFrontier(frontier, primaryElements);
+                }
 
                 if (TelemetryStateManager.Instance != null)
                     TelemetryStateManager.Instance.IngestNewTelemetry(primaryElements);
@@ -73,7 +81,6 @@ namespace OrbitGuard.Managers
                 if (encounterSatellite != null) encounterSatellite.Initialize(primaryElements);
                 if (encounterDebris != null) encounterDebris.Initialize(secondaryElements);
 
-                if (vectorGrabController != null) vectorGrabController.activeCdm = cdmData;
                 if (timelineScrubber != null) timelineScrubber.activeCdm = cdmData;
 
                 if (satelliteBubble != null)
@@ -88,8 +95,10 @@ namespace OrbitGuard.Managers
                 }
 
                 if (debrisClusterManager != null)
-                    // THE FIX IS HERE: No arguments inside GenerateCluster()
-                    debrisClusterManager.GenerateCluster(); 
+                    debrisClusterManager.GenerateCluster(secondaryElements); 
+
+                if (collisionOutcomeManager != null)
+                    collisionOutcomeManager.ResetOutcome(cdmData.tcaSeconds);
             }
             else
             {

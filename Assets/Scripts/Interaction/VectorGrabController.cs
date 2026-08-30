@@ -1,39 +1,31 @@
+// REVERTS to real orbital mechanics — grabbing perturbs the ACTUAL
+// OrbitalElements on Orbit_Satellite_Macro (via Initialize), which
+// re-propagates the real Keplerian path and moves the attached
+// Satellite_Mesh with it. No UI dependency — Pc/fuel feedback goes to the
+// Console log for now, per the current UI-free setup.
+
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using OrbitGuard.Core;
-using OrbitGuard.Managers;
-using OrbitGuard.Data;
 
 namespace OrbitGuard.Interaction
 {
     [RequireComponent(typeof(XRGrabInteractable))]
     public class VectorGrabController : MonoBehaviour
     {
-        [Header("References")]
-        [Tooltip("The satellite's SimulatedOrbitVisual — this script writes burnOffsetMeters on it.")]
-        public SimulatedOrbitVisual satelliteVisual;
+        [Tooltip("Orbit_Satellite_Macro's OrbitPropagator.")]
+        public OrbitPropagator satelliteOrbitPropagator;
 
         public ThrusterModule thrusterVisual;
-
-        [Tooltip("Transform marking the zero-burn rest position for the arrow.")]
         public Transform zeroDeltaVAnchor;
 
-        [Header("The Active Conjunction — used only for its reportedCollisionProbability baseline")]
-        public ConjunctionData activeCdm;
-
-        [Header("Tuning")]
         public float metersPerMps = 0.05f;
         public float maxDeltaVPerAxisMps = 2.0f;
 
-        [Tooltip("Same curve ParetoSolver uses: at this Δv magnitude (m/s), Pc reduction saturates (i.e. burning harder than this gives no further benefit in the simplified model).")]
-        public float pcReductionSaturationMps = 2.5f;
-
         private XRGrabInteractable grabInteractable;
         private bool isHeld;
-        private Vector3 currentDeltaV;
-
-        public Vector3 CurrentDeltaV => currentDeltaV;
+        private OrbitalElements baselineElements; // captured on grab, so dragging is fully reversible instead of compounding frame over frame
 
         private void Awake()
         {
@@ -55,6 +47,8 @@ namespace OrbitGuard.Interaction
         private void OnGrabBegin(SelectEnterEventArgs args)
         {
             isHeld = true;
+            if (satelliteOrbitPropagator != null)
+                baselineElements = satelliteOrbitPropagator.currentElements;
         }
 
         private void OnGrabEnd(SelectExitEventArgs args)
@@ -64,7 +58,7 @@ namespace OrbitGuard.Interaction
 
         private void Update()
         {
-            if (!isHeld || zeroDeltaVAnchor == null || satelliteVisual == null) return;
+            if (!isHeld || zeroDeltaVAnchor == null || satelliteOrbitPropagator == null) return;
 
             Vector3 displacementMeters = transform.localPosition - zeroDeltaVAnchor.localPosition;
             Vector3 deltaVMps = displacementMeters / Mathf.Max(metersPerMps, 0.001f);
@@ -73,24 +67,23 @@ namespace OrbitGuard.Interaction
             deltaVMps.y = Mathf.Clamp(deltaVMps.y, -maxDeltaVPerAxisMps, maxDeltaVPerAxisMps);
             deltaVMps.z = Mathf.Clamp(deltaVMps.z, -maxDeltaVPerAxisMps, maxDeltaVPerAxisMps);
 
-            currentDeltaV = deltaVMps;
-
-            satelliteVisual.burnOffsetMeters = displacementMeters;
-
-            RecomputeSimplifiedRisk(deltaVMps.magnitude);
+            OrbitalElements updated = ApplyDeltaVApproximation(baselineElements, deltaVMps);
+            satelliteOrbitPropagator.Initialize(updated);
 
             if (thrusterVisual != null && deltaVMps.magnitude > 0.02f)
                 thrusterVisual.FireThruster();
         }
 
-        private void RecomputeSimplifiedRisk(float deltaVMagnitude)
+        private OrbitalElements ApplyDeltaVApproximation(OrbitalElements baseline, Vector3 deltaVRic)
         {
-            if (RiskManager.Instance == null) return;
+            const double radialSensitivity = 8.0;
+            const double inTrackSensitivity = 15.0;
+            const double crossTrackSensitivity = 0.002;
 
-            float reductionFactor = 1f - Mathf.Clamp01(deltaVMagnitude / pcReductionSaturationMps);
-            float predictedPc = (float)activeCdm.reportedCollisionProbability * reductionFactor;
-
-            RiskManager.Instance.OnPcUpdated?.Invoke(predictedPc);
+            OrbitalElements updated = baseline;
+            updated.semiMajorAxis += deltaVRic.x * radialSensitivity + deltaVRic.z * inTrackSensitivity;
+            updated.inclination += deltaVRic.y * crossTrackSensitivity;
+            return updated;
         }
     }
 }

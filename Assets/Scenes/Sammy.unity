@@ -749,6 +749,7 @@ Transform:
   - {fileID: 544998404}
   - {fileID: 822120377}
   - {fileID: 419483447}
+  - {fileID: 731010844}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &544998403
@@ -1089,6 +1090,37 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8977776f9d4b976459f2dd36b954c204, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &731010843
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 731010844}
+  m_Layer: 0
+  m_Name: Debris_And_Ghosts_Container
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &731010844
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731010843}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 461125867}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &749852258
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1855,19 +1887,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a18c70cc37dc256408559f65aa06ed51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fragmentPrefabs:
-  - {fileID: 9216028174848736296, guid: 0266bc588152b314f9e08affda6ad99f, type: 3}
-  - {fileID: 1738899040806945955, guid: cc2bf72ce953b0043ad4ea5e24c95709, type: 3}
-  - {fileID: 9089482030950498502, guid: 78b8ec410b81e174abaa0d9523a7e6f0, type: 3}
-  - {fileID: 3793523495469464399, guid: 970a5827d666ba842bfd7686860c36eb, type: 3}
-  spawnParent: {fileID: 81178670}
-  fragmentCount: 20
+  fragmentPrefab: {fileID: 3284388555214767846, guid: 1ae6f87ed20a1f6468d7a7e6d85d883e, type: 3}
+  spawnParent: {fileID: 731010844}
+  fragmentCount: 40
   untrackedHaze: {fileID: 0}
-  baseSemiMajorAxis: 2.2
-  axisRandomRange: 0.6
-  inclinationRandomRangeDegrees: 25
-  periodBaseSeconds: 28
-  periodRandomRange: 8
 --- !u!114 &1202373649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2519,58 +2542,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64cd16a0401668a46a47bb4d55fe7af7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  satelliteVisual: {fileID: 180480955}
+  satelliteOrbitPropagator: {fileID: 0}
   thrusterVisual: {fileID: 1134498953}
   zeroDeltaVAnchor: {fileID: 288844392}
-  activeCdm:
-    conjunctionId: 
-    creationDateUtc: 
-    tcaSeconds: 0
-    missDistanceKm: 0
-    relativeSpeedKmPerSec: 0
-    reportedCollisionProbability: 0
-    hasReportedCollisionProbability: 0
-    object1:
-      objectDesignator: 
-      objectName: 
-      objectType: 
-      x: 0
-      y: 0
-      z: 0
-      xDot: 0
-      yDot: 0
-      zDot: 0
-      covariance:
-        crR: 0
-        ctT: 0
-        cnN: 0
-        ctR: 0
-        cnR: 0
-        cnT: 0
-      hardBodyRadiusMeters: 0
-      massKg: 0
-    object2:
-      objectDesignator: 
-      objectName: 
-      objectType: 
-      x: 0
-      y: 0
-      z: 0
-      xDot: 0
-      yDot: 0
-      zDot: 0
-      covariance:
-        crR: 0
-        ctT: 0
-        cnN: 0
-        ctR: 0
-        cnR: 0
-        cnT: 0
-      hardBodyRadiusMeters: 0
-      massKg: 0
   metersPerMps: 0.05
   maxDeltaVPerAxisMps: 2
-  pcReductionSaturationMps: 2.5
 --- !u!114 &1811988409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3177,6 +3153,8 @@ MonoBehaviour:
   satelliteBubble: {fileID: 1210374844}
   debrisBubble: {fileID: 1202373649}
   debrisClusterManager: {fileID: 1202373648}
+  optimalPathVisualizer: {fileID: 0}
+  collisionOutcomeManager: {fileID: 0}
 --- !u!1 &2040015315
 GameObject:
   m_ObjectHideFlags: 0

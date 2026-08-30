@@ -1,3 +1,12 @@
+// REVERTS DebrisClusterManager back to real orbital math, matching your
+// current architecture (Satellite_Mesh/Debris_Mesh parented directly to
+// Orbit_Satellite_Macro/Orbit_Debris_Macro).
+//
+// THE FIX for "debris orbits the XR Origin": spawnParent must be an empty
+// GameObject at Earth's local origin, a SIBLING of Orbit_Satellite_Macro/
+// Orbit_Debris_Macro under [Macro_Space_Orbital_Deck] — NOT under XR
+// Origin, and not left unassigned.
+
 using UnityEngine;
 using System.Collections.Generic;
 using OrbitGuard.Core;
@@ -8,17 +17,13 @@ namespace OrbitGuard.Managers
     {
         public static DebrisClusterManager Instance { get; private set; }
 
-        public List<GameObject> fragmentPrefabs; 
+        public GameObject fragmentPrefab;
+
+        [Tooltip("MUST be an empty GameObject at Earth's local origin, sibling of Orbit_Satellite_Macro/Orbit_Debris_Macro. NOT under XR Origin.")]
         public Transform spawnParent;
+
         public int fragmentCount = 20;
         public ParticleSystem untrackedHaze;
-
-        [Header("Cluster Spread (local Unity meters)")]
-        public float baseSemiMajorAxis = 2.2f;
-        public float axisRandomRange = 0.6f;
-        public float inclinationRandomRangeDegrees = 25f;
-        public float periodBaseSeconds = 28f;
-        public float periodRandomRange = 8f;
 
         private List<GameObject> activeFragments = new List<GameObject>();
 
@@ -28,32 +33,43 @@ namespace OrbitGuard.Managers
             Instance = this;
         }
 
-        public void GenerateCluster()
+        public void GenerateCluster(OrbitalElements parentElements)
         {
             foreach (var frag in activeFragments) Destroy(frag);
             activeFragments.Clear();
 
-            if (fragmentPrefabs == null || fragmentPrefabs.Count == 0)
+            if (spawnParent == null)
             {
-                Debug.LogWarning("DebrisClusterManager: no fragment prefabs assigned.");
+                Debug.LogError("DebrisClusterManager: spawnParent not assigned — fragments would spawn in the wrong hierarchy.");
                 return;
             }
 
-            Transform parentForSpawn = spawnParent != null ? spawnParent : transform;
-
             for (int i = 0; i < fragmentCount; i++)
             {
-                GameObject prefab = fragmentPrefabs[Random.Range(0, fragmentPrefabs.Count)];
-                GameObject newFrag = Instantiate(prefab, parentForSpawn);
+                OrbitalElements fragElements = parentElements;
+                // ADDED 'f' TO ALL NUMBERS HERE:
+                fragElements.semiMajorAxis += Random.Range(-15.0f, 15.0f);
+                fragElements.inclination += Random.Range(-0.02f, 0.02f);
+                fragElements.raan += Random.Range(-0.05f, 0.05f);
+                fragElements.meanAnomalyAtEpoch += Random.Range(-0.3f, 0.3f);
 
-                var visual = newFrag.GetComponent<SimulatedOrbitVisual>();
-                if (visual == null) visual = newFrag.AddComponent<SimulatedOrbitVisual>();
+                GameObject newFrag = Instantiate(fragmentPrefab, spawnParent);
 
-                visual.semiMajorAxisMeters = baseSemiMajorAxis + Random.Range(-axisRandomRange, axisRandomRange);
-                visual.semiMinorAxisMeters = visual.semiMajorAxisMeters * Random.Range(0.75f, 0.95f);
-                visual.inclinationDegrees = Random.Range(-inclinationRandomRangeDegrees, inclinationRandomRangeDegrees);
-                visual.periodSeconds = periodBaseSeconds + Random.Range(-periodRandomRange, periodRandomRange);
-                visual.phaseOffset = Random.Range(0f, 1f);
+                OrbitPropagator prop = newFrag.GetComponent<OrbitPropagator>();
+                if (prop != null)
+                {
+                    prop.displayMode = OrbitDisplayMode.Macro;
+                    prop.Initialize(fragElements);
+
+                    LineRenderer lr = newFrag.GetComponent<LineRenderer>();
+                    if (lr != null)
+                    {
+                        lr.startWidth = 0.01f;
+                        lr.endWidth = 0.01f;
+                        lr.startColor = new Color(1f, 0.4f, 0f, 0.3f);
+                        lr.endColor = new Color(1f, 0.4f, 0f, 0.3f);
+                    }
+                }
 
                 Rigidbody rb = newFrag.GetComponent<Rigidbody>();
                 if (rb != null) Destroy(rb);
@@ -62,8 +78,7 @@ namespace OrbitGuard.Managers
             }
 
             if (untrackedHaze != null) untrackedHaze.Play();
-
-            Debug.Log($"DebrisClusterManager: Generated {fragmentCount} simulated fragments.");
+            Debug.Log($"DebrisClusterManager: Generated {fragmentCount} real-math fragments around Earth.");
         }
     }
 }
