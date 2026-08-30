@@ -1,46 +1,62 @@
 using UnityEngine;
 using TMPro;
-using OrbitGuard.Managers;
-using OrbitGuard.Core;
 
 namespace OrbitGuard.UI
 {
     public class WristHUDController : MonoBehaviour
     {
-        public TextMeshProUGUI wristText;
-        public float dryMassKg = 560f;
+        public static WristHUDController Instance { get; private set; }
 
-        private void OnEnable()
+        [Header("Miss Distance (Panel 1)")]
+        [Tooltip("Drag 'Panel1 -> CollisionProb' here")]
+        public TextMeshProUGUI missDistanceLabel;
+        [Tooltip("Drag 'Panel1 -> ColProbText' here")]
+        public TextMeshProUGUI missDistanceValue;
+
+        [Header("Simulation Time (Panel 1 (1))")]
+        [Tooltip("Drag 'Panel1 (1) -> CollisionProb' here")]
+        public TextMeshProUGUI simTimeLabel;
+        [Tooltip("Drag 'Panel1 (1) -> ColProbText' here")]
+        public TextMeshProUGUI simTimeValue;
+
+        [Header("Header Text")]
+        [Tooltip("Drag 'OrbitalSafety' here")]
+        public TextMeshProUGUI headerText;
+
+        private void Awake()
         {
-            if (RiskManager.Instance != null)
-                RiskManager.Instance.OnPcUpdated += HandlePcUpdated;
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
         }
 
-        private void OnDisable()
+        // Call this from your RiskManager or ConjunctionManager
+        public void UpdateMissDistance(float distanceInKm)
         {
-            if (RiskManager.Instance != null)
-                RiskManager.Instance.OnPcUpdated -= HandlePcUpdated;
+            if (missDistanceValue != null)
+            {
+                // Formats to 3 decimal places (e.g., 0.584 Km)
+                missDistanceValue.text = $"{distanceInKm:F3} Km";
+            }
         }
 
-        private void HandlePcUpdated(float pc)
+        // Call this from your TimeController
+        public void UpdateSimTime(float timeInSeconds)
         {
-            Redraw(pc);
+            if (simTimeValue != null)
+            {
+                // Rounds to a whole number (e.g., 638 secs)
+                simTimeValue.text = $"{Mathf.FloorToInt(timeInSeconds)} secs";
+            }
         }
 
-        private void Update()
+        // Optional: Update the "HELLO GANG" text to show status warnings
+        public void UpdateHeader(string message, Color color)
         {
-            Redraw(null);
-        }
-
-        private void Redraw(float? pcOverride)
-        {
-            if (wristText == null) return;
-
-            double simTime = TimeController.Instance != null ? TimeController.Instance.SimulationTime : 0.0;
-            string pcLine = pcOverride.HasValue ? $"Pc: {pcOverride.Value:E2}" : "Pc: --";
-            string missLine = RiskManager.Instance != null ? $"Miss: {RiskManager.Instance.CurrentLiveMissDistanceKm:F3} km" : "Miss: --";
-
-            wristText.text = $"<b>{pcLine}</b>\n{missLine}\nSim T+: {simTime:F0}s";
+            if (headerText != null)
+            {
+                headerText.text = message;
+                headerText.color = color;
+            }
         }
     }
 }
