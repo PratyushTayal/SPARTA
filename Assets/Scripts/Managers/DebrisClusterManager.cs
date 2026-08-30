@@ -16,27 +16,15 @@ namespace OrbitGuard.Managers
         [Header("Cluster Settings")]
         public int fragmentCount = 100;
 
-        [Tooltip("Base visual scale multiplier applied to the prefab's original size.")]
         [Range(0.1f, 50.0f)]
         public float fragmentVisualScale = 5.0f;
-        
-        [Tooltip("Minimum random size multiplier (e.g., 0.5 = half size)")]
         public float minSizeMultiplier = 0.3f;
-        
-        [Tooltip("Maximum random size multiplier (e.g., 2.0 = double size)")]
         public float maxSizeMultiplier = 2.5f;
 
         [Header("Orbit Scatter Settings")]
-        [Tooltip("Keep this LOW (e.g. 0.5 - 2) so they stay in a tight shell around Earth.")]
         public float altitudeScatter = 1.5f;
-        
-        [Tooltip("Keep this moderate (e.g. 5-15) for a realistic debris band.")]
         public float inclinationScatter = 8f;
-        
-        [Tooltip("Keep this moderate (e.g. 5-15).")]
         public float raanScatter = 10f;
-        
-        [Tooltip("Use 360 to spread them completely around the ring.")]
         public float anomalyScatter = 360f;
 
         [Header("Orbit Line Visuals")]
@@ -58,17 +46,11 @@ namespace OrbitGuard.Managers
             foreach (var frag in activeFragments) Destroy(frag);
             activeFragments.Clear();
 
-            if (spawnParent == null || fragmentPrefabs == null || fragmentPrefabs.Count == 0)
-            {
-                Debug.LogError("DebrisClusterManager: Missing spawnParent or empty prefab list.");
-                return;
-            }
+            if (spawnParent == null || fragmentPrefabs == null || fragmentPrefabs.Count == 0) return;
 
             for (int i = 0; i < fragmentCount; i++)
             {
                 OrbitalElements fragElements = parentElements;
-                
-                // Keep the debris in a tighter shell, but spread them fully around the planet
                 fragElements.semiMajorAxis += Random.Range(-altitudeScatter, altitudeScatter);
                 fragElements.inclination += Random.Range(-inclinationScatter, inclinationScatter);
                 fragElements.raan += Random.Range(-raanScatter, raanScatter);
@@ -77,13 +59,47 @@ namespace OrbitGuard.Managers
                 GameObject prefabToSpawn = fragmentPrefabs[Random.Range(0, fragmentPrefabs.Count)];
                 GameObject newFrag = Instantiate(prefabToSpawn, spawnParent);
 
-                // FIX: Respect original prefab scale, apply base scale, AND add random size variation
-                float randomScaleFactor = Random.Range(minSizeMultiplier, maxSizeMultiplier);
-                newFrag.transform.localScale = prefabToSpawn.transform.localScale * fragmentVisualScale * randomScaleFactor;
-
                 OrbitPropagator prop = newFrag.GetComponent<OrbitPropagator>();
                 if (prop != null)
                 {
+                    // 1. Keep the path anchor at scale 1 so the orbit line doesn't distort
+                    newFrag.transform.localScale = Vector3.one;
+
+                    // 2. Auto-Fix Hierarchy: Separate mesh from orbit path
+                    Transform childVisual = null;
+                    MeshRenderer rootMR = newFrag.GetComponent<MeshRenderer>();
+                    
+                    if (rootMR != null) 
+                    {
+                        GameObject visualObj = new GameObject("VisualBody");
+                        visualObj.transform.SetParent(newFrag.transform, false);
+                        
+                        MeshFilter rootMF = newFrag.GetComponent<MeshFilter>();
+                        if (rootMF != null) 
+                        {
+                            visualObj.AddComponent<MeshFilter>().sharedMesh = rootMF.sharedMesh;
+                            Destroy(rootMF);
+                        }
+                        
+                        MeshRenderer childMR = visualObj.AddComponent<MeshRenderer>();
+                        childMR.sharedMaterials = rootMR.sharedMaterials;
+                        Destroy(rootMR);
+                        
+                        childVisual = visualObj.transform;
+                    }
+                    else if (newFrag.transform.childCount > 0)
+                    {
+                        childVisual = newFrag.transform.GetChild(0);
+                    }
+
+                    // 3. Assign visual body and scale it
+                    if (childVisual != null)
+                    {
+                        prop.visualBody = childVisual;
+                        float randomScaleFactor = Random.Range(minSizeMultiplier, maxSizeMultiplier);
+                        childVisual.localScale = prefabToSpawn.transform.localScale * fragmentVisualScale * randomScaleFactor;
+                    }
+
                     prop.displayMode = OrbitDisplayMode.Macro;
                     prop.Initialize(fragElements);
 
@@ -95,7 +111,7 @@ namespace OrbitGuard.Managers
                         {
                             lr.startWidth = orbitLineWidth;
                             lr.endWidth = orbitLineWidth;
-                            lr.startColor = new Color(1f, 0.4f, 0f, 0.15f); // Lowered alpha for less clutter
+                            lr.startColor = new Color(1f, 0.4f, 0f, 0.15f);
                             lr.endColor = new Color(1f, 0.4f, 0f, 0.15f);
                         }
                     }
@@ -106,9 +122,6 @@ namespace OrbitGuard.Managers
 
                 activeFragments.Add(newFrag);
             }
-
-            if (untrackedHaze != null) untrackedHaze.Play();
-            Debug.Log($"DebrisClusterManager: Generated {fragmentCount} scattered fragments.");
         }
     }
 }
