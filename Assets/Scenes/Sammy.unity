@@ -560,6 +560,14 @@ MonoBehaviour:
   SimulationTime: 0
   IsPlaying: 1
   TimeScale: 10
+  criticalEventTimeSeconds: -1
+  criticalWindowSeconds: 300
+  criticalSlowdownFactor: 0.02
+--- !u!1 &356020743 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4805732015455483866, guid: 9e6ec5df14f589b41a64c4d5f2d27fbb, type: 3}
+  m_PrefabInstance: {fileID: 6738861153716727155}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &419483446
 GameObject:
   m_ObjectHideFlags: 0
@@ -682,7 +690,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 231501301010270205, guid: fb18803789fb29143b9e38a717b75d54, type: 3}
       propertyPath: m_text
-      value: '  HELLO GANG'
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 231501301010270205, guid: fb18803789fb29143b9e38a717b75d54, type: 3}
       propertyPath: m_fontSize
@@ -3192,10 +3200,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c94906b28672c794eb79036f4ac47965, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  satelliteOrbitPropagator: {fileID: 2088868315}
+  debrisOrbitPropagator: {fileID: 613301528}
   satelliteMesh: {fileID: 1376525478}
   debrisMesh: {fileID: 494932178}
+  hideOnImpact:
+  - {fileID: 356020743}
   tcaSeconds: 0
   collisionThresholdUnits: 0.05
+  subSamplesPerFrame: 30
 --- !u!1 &1644447676
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,114 +1,163 @@
 using UnityEngine;
 using OrbitGuard.Core;
-using OrbitGuard.UI; 
+using OrbitGuard.UI;
 
 namespace OrbitGuard.Managers
 {
     public class CollisionOutcomeManager : MonoBehaviour
     {
-        [Header("Physical Meshes")]
-        public Transform satelliteMesh; 
-        public Transform debrisMesh;    
+        [Header("Real Orbital Data")]
+        public OrbitPropagator satelliteOrbitPropagator;
+        public OrbitPropagator debrisOrbitPropagator;
+
+        [Header("Physical Meshes (for visual effects/destruction only)")]
+        public Transform satelliteMesh;
+        public Transform debrisMesh;
+        
+        [Header("Extra Cleanup")]
+        [Tooltip("Drag Ghost Lines or UI here to hide them when the ship explodes.")]
+        public GameObject[] hideOnImpact;
 
         [Header("Collision Parameters")]
         public double tcaSeconds;
         public float collisionThresholdUnits = 0.05f;
+        public int subSamplesPerFrame = 30;
 
         private bool hasTriggeredOutcome = false;
+        private double previousSimTime;
+        private bool hasPreviousSimTime = false;
 
         private void Update()
         {
-            if (TimeController.Instance == null || satelliteMesh == null || debrisMesh == null) return;
+            if (TimeController.Instance == null || satelliteOrbitPropagator == null || debrisOrbitPropagator == null) return;
 
-            double currentTime = TimeController.Instance.SimulationTime;
-            float currentDistance = Vector3.Distance(satelliteMesh.position, debrisMesh.position);
+            double currentSimTime = TimeController.Instance.SimulationTime;
 
-            // 1. LIVE HUD UPDATES
-            if (WristHUDController.Instance != null)
+            if (!hasPreviousSimTime)
             {
-                WristHUDController.Instance.UpdateSimTime((float)currentTime);
-                WristHUDController.Instance.UpdateMissDistance(currentDistance * 1000f); 
+                previousSimTime = currentSimTime;
+                hasPreviousSimTime = true;
             }
 
-            // 2. TIME-TRAVEL STATE MACHINE
-            bool isPastTca = currentTime > tcaSeconds + 5.0; // 5-second buffer past closest approach
+            float minDistanceThisStep = FindMinimumDistanceAcrossStep(previousSimTime, currentSimTime);
 
-            if (isPastTca && !hasTriggeredOutcome)
+            if (WristHUDController.Instance != null)
             {
-                TriggerOutcome(currentDistance); // We just scrubbed forward into the crash
+                WristHUDController.Instance.UpdateSimTime((float)currentSimTime);
+                WristHUDController.Instance.UpdateMissDistance(minDistanceThisStep * 1000f);
+            }
+
+            bool isPastTca = currentSimTime > tcaSeconds + 5.0;
+            bool wasPastTca = previousSimTime > tcaSeconds + 5.0;
+
+            if (isPastTca && !wasPastTca && !hasTriggeredOutcome)
+            {
+                TriggerOutcome(minDistanceThisStep);
             }
             else if (!isPastTca && hasTriggeredOutcome)
             {
-                ResetToPreEncounter(); // We just rewound time back to safety!
+                ResetToPreEncounter();
             }
+
+            previousSimTime = currentSimTime;
         }
 
-        private void TriggerOutcome(float finalDistance)
+        private float FindMinimumDistanceAcrossStep(double startTime, double endTime)
+        {
+            double lo = System.Math.Min(startTime, endTime);
+            double hi = System.Math.Max(startTime, endTime);
+
+            float minDistance = float.MaxValue;
+            int samples = System.Math.Max(2, subSamplesPerFrame);
+            
+            for (int i = 0; i < samples; i++)
+            {
+                double t = lo + (hi - lo) * (i / (double)(samples - 1));
+
+                Vector3 satPos = KeplerianMath.GetPosition(satelliteOrbitPropagator.currentElements, t);
+                Vector3 debPos = KeplerianMath.GetPosition(debrisOrbitPropagator.currentElements, t);
+                float dist = Vector3.Distance(satPos, debPos) / ScaleConstants.KmPerMacroUnit;
+
+                if (dist < minDistance) minDistance = dist;
+            }
+
+            return minDistance;
+        }
+
+        private void TriggerOutcome(float minDistanceFound)
         {
             hasTriggeredOutcome = true;
-            bool collided = finalDistance < collisionThresholdUnits;
+            bool collided = minDistanceFound < collisionThresholdUnits;
 
             if (WristHUDController.Instance != null)
             {
                 WristHUDController.Instance.UpdateHeader(
-                    collided ? "IMPACT DETECTED" : "SAFE PASSAGE", 
+                    collided ? " IMPACT DETECTED" : " SAFE PASSAGE",
                     collided ? Color.red : Color.green
                 );
             }
 
             if (collided)
             {
-                Debug.Log($"[Collision] CATASTROPHIC IMPACT! Distance: {finalDistance:F4}");
-                // Hide the satellite's 3D models to simulate destruction
-                SetMeshVisibility(satelliteMesh, false);
+                Debug.Log($"[Collision] CATASTROPHIC IMPACT! True minimum distance found: {minDistanceFound:F5} units.");
+                SetSatelliteVisibility(false);
+                ToggleExtras(false);
             }
             else
             {
-                Debug.Log($"[Collision] SAFE. Distance: {finalDistance:F4}");
+                Debug.Log($"[Collision] SAFE. True minimum distance found: {minDistanceFound:F5} units.");
             }
         }
 
         private void ResetToPreEncounter()
         {
             hasTriggeredOutcome = false;
-
-            // Heal the satellite because we rewound time
-            SetMeshVisibility(satelliteMesh, true);
+            SetSatelliteVisibility(true);
+            ToggleExtras(true);
 
             if (WristHUDController.Instance != null)
-            {
-                WristHUDController.Instance.UpdateHeader("STATUS: NOMINAL", Color.cyan);
-            }
-            
+                WristHUDController.Instance.UpdateHeader(" STATUS: NOMINAL", Color.cyan);
+
             Debug.Log("CollisionOutcomeManager: Time rewound. Satellite restored to nominal state.");
         }
 
-        // Toggles visibility without destroying the GameObject (which would break the orbits)
-        private void SetMeshVisibility(Transform targetNode, bool isVisible)
+        // --- THE UPGRADED VISIBILITY FUNCTION ---
+        private void SetSatelliteVisibility(bool isVisible)
         {
-            if (targetNode == null) return;
-            
-            MeshRenderer[] renderers = targetNode.GetComponentsInChildren<MeshRenderer>(true);
-            foreach (var r in renderers)
+            // 1. Toggle the 3D Model
+            if (satelliteMesh != null)
             {
-                r.enabled = isVisible;
+                MeshRenderer[] renderers = satelliteMesh.GetComponentsInChildren<MeshRenderer>(true);
+                foreach (var r in renderers) r.enabled = isVisible;
+            }
+
+            // 2. Toggle the Orbit Line Ring
+            if (satelliteOrbitPropagator != null)
+            {
+                LineRenderer lr = satelliteOrbitPropagator.GetComponent<LineRenderer>();
+                if (lr != null) lr.enabled = isVisible;
             }
         }
 
-        // --- THE MISSING METHOD ---
-        // Called by ConjunctionManager when loading a new file
+        private void ToggleExtras(bool isVisible)
+        {
+            if (hideOnImpact == null) return;
+            foreach (var obj in hideOnImpact)
+            {
+                if (obj != null) obj.SetActive(isVisible);
+            }
+        }
+
         public void ResetOutcome(double newTcaSeconds)
         {
             tcaSeconds = newTcaSeconds;
             hasTriggeredOutcome = false;
-            
-            // Ensure satellite is visible on load
-            SetMeshVisibility(satelliteMesh, true);
+            hasPreviousSimTime = false; 
+            SetSatelliteVisibility(true);
+            ToggleExtras(true);
 
             if (WristHUDController.Instance != null)
-            {
-                WristHUDController.Instance.UpdateHeader("STATUS: NOMINAL", Color.cyan);
-            }
+                WristHUDController.Instance.UpdateHeader(" STATUS: NOMINAL", Color.cyan);
         }
     }
 }
