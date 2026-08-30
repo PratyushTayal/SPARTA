@@ -1,71 +1,114 @@
-// NEW FILE — nothing before this ever resolved a conjunction into an
-// actual outcome. This watches the real distance between the two macro
-// objects as simulation time crosses TCA and fires a clear result.
-
 using UnityEngine;
 using OrbitGuard.Core;
+using OrbitGuard.UI; 
 
 namespace OrbitGuard.Managers
 {
     public class CollisionOutcomeManager : MonoBehaviour
     {
-        public Transform satelliteMesh; // the real Satellite_Mesh, parented under Orbit_Satellite_Macro
-        public Transform debrisMesh;    // the real Debris_Mesh, parented under Orbit_Debris_Macro
+        [Header("Physical Meshes")]
+        public Transform satelliteMesh; 
+        public Transform debrisMesh;    
 
-        [Tooltip("Real TCA, seconds — same value ConjunctionManager parsed from the CDM.")]
+        [Header("Collision Parameters")]
         public double tcaSeconds;
-
-        [Tooltip("Collision threshold, Unity units (macro scale — 1 unit = 1000km via ScaleConstants.KmPerMacroUnit, so this should be your combined hard-body radius converted to that scale, or exaggerated for visibility since a real ~20m HBR is far too small to ever visually register at macro scale).")]
         public float collisionThresholdUnits = 0.05f;
 
-        public GameObject collisionVfxPrefab; // simple burst/explosion, spawned at the point of closest approach
-        public AudioSource collisionAudio;
-        public AudioSource safePassageAudio;
-
-        private bool outcomeResolved = false;
+        private bool hasTriggeredOutcome = false;
 
         private void Update()
         {
-            if (outcomeResolved || TimeController.Instance == null) return;
-            if (satelliteMesh == null || debrisMesh == null) return;
+            if (TimeController.Instance == null || satelliteMesh == null || debrisMesh == null) return;
 
-            // Resolve shortly after TCA passes, once the closest-approach
-            // moment has actually happened — not exactly AT tcaSeconds,
-            // since exact frame timing will never land precisely on it.
-            if (TimeController.Instance.SimulationTime > tcaSeconds + 60.0)
+            double currentTime = TimeController.Instance.SimulationTime;
+            float currentDistance = Vector3.Distance(satelliteMesh.position, debrisMesh.position);
+
+            // 1. LIVE HUD UPDATES
+            if (WristHUDController.Instance != null)
             {
-                float distance = Vector3.Distance(satelliteMesh.position, debrisMesh.position);
-                ResolveOutcome(distance);
+                WristHUDController.Instance.UpdateSimTime((float)currentTime);
+                WristHUDController.Instance.UpdateMissDistance(currentDistance * 1000f); 
+            }
+
+            // 2. TIME-TRAVEL STATE MACHINE
+            bool isPastTca = currentTime > tcaSeconds + 5.0; // 5-second buffer past closest approach
+
+            if (isPastTca && !hasTriggeredOutcome)
+            {
+                TriggerOutcome(currentDistance); // We just scrubbed forward into the crash
+            }
+            else if (!isPastTca && hasTriggeredOutcome)
+            {
+                ResetToPreEncounter(); // We just rewound time back to safety!
             }
         }
 
-        private void ResolveOutcome(float finalDistance)
+        private void TriggerOutcome(float finalDistance)
         {
-            outcomeResolved = true;
-
+            hasTriggeredOutcome = true;
             bool collided = finalDistance < collisionThresholdUnits;
+
+            if (WristHUDController.Instance != null)
+            {
+                WristHUDController.Instance.UpdateHeader(
+                    collided ? "IMPACT DETECTED" : "SAFE PASSAGE", 
+                    collided ? Color.red : Color.green
+                );
+            }
 
             if (collided)
             {
-                Debug.Log($"CollisionOutcomeManager: COLLISION — final separation {finalDistance:F4} units, threshold {collisionThresholdUnits}.");
-                if (collisionVfxPrefab != null)
-                    Instantiate(collisionVfxPrefab, satelliteMesh.position, Quaternion.identity);
-                if (collisionAudio != null)
-                    collisionAudio.Play();
+                Debug.Log($"[Collision] CATASTROPHIC IMPACT! Distance: {finalDistance:F4}");
+                // Hide the satellite's 3D models to simulate destruction
+                SetMeshVisibility(satelliteMesh, false);
             }
             else
             {
-                Debug.Log($"CollisionOutcomeManager: SAFE PASSAGE — final separation {finalDistance:F4} units, threshold {collisionThresholdUnits}.");
-                if (safePassageAudio != null)
-                    safePassageAudio.Play();
+                Debug.Log($"[Collision] SAFE. Distance: {finalDistance:F4}");
             }
         }
 
-        /// <summary>Call this from ConjunctionManager after loading a new CDM, or from a "retry" button, to re-arm the check for a fresh run.</summary>
+        private void ResetToPreEncounter()
+        {
+            hasTriggeredOutcome = false;
+
+            // Heal the satellite because we rewound time
+            SetMeshVisibility(satelliteMesh, true);
+
+            if (WristHUDController.Instance != null)
+            {
+                WristHUDController.Instance.UpdateHeader("STATUS: NOMINAL", Color.cyan);
+            }
+            
+            Debug.Log("CollisionOutcomeManager: Time rewound. Satellite restored to nominal state.");
+        }
+
+        // Toggles visibility without destroying the GameObject (which would break the orbits)
+        private void SetMeshVisibility(Transform targetNode, bool isVisible)
+        {
+            if (targetNode == null) return;
+            
+            MeshRenderer[] renderers = targetNode.GetComponentsInChildren<MeshRenderer>(true);
+            foreach (var r in renderers)
+            {
+                r.enabled = isVisible;
+            }
+        }
+
+        // --- THE MISSING METHOD ---
+        // Called by ConjunctionManager when loading a new file
         public void ResetOutcome(double newTcaSeconds)
         {
             tcaSeconds = newTcaSeconds;
-            outcomeResolved = false;
+            hasTriggeredOutcome = false;
+            
+            // Ensure satellite is visible on load
+            SetMeshVisibility(satelliteMesh, true);
+
+            if (WristHUDController.Instance != null)
+            {
+                WristHUDController.Instance.UpdateHeader("STATUS: NOMINAL", Color.cyan);
+            }
         }
     }
 }

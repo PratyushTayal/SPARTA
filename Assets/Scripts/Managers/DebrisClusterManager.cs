@@ -60,6 +60,15 @@ namespace OrbitGuard.Managers
                 GameObject newFrag = Instantiate(prefabToSpawn, spawnParent);
 
                 OrbitPropagator prop = newFrag.GetComponent<OrbitPropagator>();
+                
+                // --- THE CRITICAL FIX ---
+                // Automatically add the Propagator if the raw prefab doesn't have it!
+                if (prop == null)
+                {
+                    prop = newFrag.AddComponent<OrbitPropagator>();
+                }
+                // ------------------------
+
                 if (prop != null)
                 {
                     // 1. Keep the path anchor at scale 1 so the orbit line doesn't distort
