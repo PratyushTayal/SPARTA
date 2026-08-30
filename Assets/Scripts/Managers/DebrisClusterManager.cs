@@ -1,3 +1,12 @@
+// REVERTS DebrisClusterManager back to real orbital math, matching your
+// current architecture (Satellite_Mesh/Debris_Mesh parented directly to
+// Orbit_Satellite_Macro/Orbit_Debris_Macro).
+//
+// THE FIX for "debris orbits the XR Origin": spawnParent must be an empty
+// GameObject at Earth's local origin, a SIBLING of Orbit_Satellite_Macro/
+// Orbit_Debris_Macro under [Macro_Space_Orbital_Deck] — NOT under XR
+// Origin, and not left unassigned.
+
 using UnityEngine;
 using System.Collections.Generic;
 using OrbitGuard.Core;
@@ -8,19 +17,12 @@ namespace OrbitGuard.Managers
     {
         public static DebrisClusterManager Instance { get; private set; }
 
-        [Tooltip("The small cube prefab representing a fragment")]
         public GameObject fragmentPrefab;
 
-        [Tooltip("Drag the [DebrisCluster] GameObject here")]
+        [Tooltip("MUST be an empty GameObject at Earth's local origin, sibling of Orbit_Satellite_Macro/Orbit_Debris_Macro. NOT under XR Origin.")]
         public Transform spawnParent;
 
-        [Tooltip("Drag the Placeholder_Satellite here so fragments know what to scale against")]
-        public OrbitPropagator primaryPropagator;
-
-        [Tooltip("How many fragments to simulate (15-30 recommended)")]
         public int fragmentCount = 20;
-
-        [Tooltip("The particle system representing the thousands of untracked fragments")]
         public ParticleSystem untrackedHaze;
 
         private List<GameObject> activeFragments = new List<GameObject>();
@@ -33,58 +35,50 @@ namespace OrbitGuard.Managers
 
         public void GenerateCluster(OrbitalElements parentElements)
         {
-            // Clear old fragments if any
             foreach (var frag in activeFragments) Destroy(frag);
             activeFragments.Clear();
 
+            if (spawnParent == null)
+            {
+                Debug.LogError("DebrisClusterManager: spawnParent not assigned — fragments would spawn in the wrong hierarchy.");
+                return;
+            }
+
             for (int i = 0; i < fragmentCount; i++)
             {
-                // 1. Statistically perturb the parent orbit to simulate the breakup explosion
                 OrbitalElements fragElements = parentElements;
+                // ADDED 'f' TO ALL NUMBERS HERE:
+                fragElements.semiMajorAxis += Random.Range(-15.0f, 15.0f);
+                fragElements.inclination += Random.Range(-0.02f, 0.02f);
+                fragElements.raan += Random.Range(-0.05f, 0.05f);
+                fragElements.meanAnomalyAtEpoch += Random.Range(-0.3f, 0.3f);
 
-                // Semi-major axis varies by a few kilometers (Added 'f' suffixes here!)
-                fragElements.semiMajorAxis += UnityEngine.Random.Range(-15.0f, 15.0f); 
-                
-                // Inclination and RAAN vary by tiny fractions to create a cone/band
-                fragElements.inclination += UnityEngine.Random.Range(-0.002f, 0.002f);
-                fragElements.raan += UnityEngine.Random.Range(-0.01f, 0.01f);
-                
-                // Spread them out along the orbit path so they aren't clumped in one dot
-                fragElements.meanAnomalyAtEpoch += UnityEngine.Random.Range(-0.1f, 0.1f);
+                GameObject newFrag = Instantiate(fragmentPrefab, spawnParent);
 
-                // 2. Instantiate the physical fragment under the designated spawn parent
-                Transform parentTransform = spawnParent != null ? spawnParent : this.transform;
-                GameObject newFrag = Instantiate(fragmentPrefab, parentTransform);
-                
-                // 3. Hook up its math engine
                 OrbitPropagator prop = newFrag.GetComponent<OrbitPropagator>();
                 if (prop != null)
                 {
+                    prop.displayMode = OrbitDisplayMode.Macro;
                     prop.Initialize(fragElements);
-                    
-                    // FIXED: Removed "OrbitPropagator." prefix from OrbitDisplayMode
-                    prop.displayMode = OrbitDisplayMode.EncounterRelative; 
-                    prop.relativeReference = primaryPropagator;
-                    
-                    // Make fragment lines thinner and dimmer than the main satellites
+
                     LineRenderer lr = newFrag.GetComponent<LineRenderer>();
                     if (lr != null)
                     {
-                        lr.startWidth = 0.005f;
-                        lr.endWidth = 0.005f;
-                        // Faint orange color for debris
-                        lr.startColor = new Color(1f, 0.4f, 0f, 0.3f); 
+                        lr.startWidth = 0.01f;
+                        lr.endWidth = 0.01f;
+                        lr.startColor = new Color(1f, 0.4f, 0f, 0.3f);
                         lr.endColor = new Color(1f, 0.4f, 0f, 0.3f);
                     }
                 }
 
+                Rigidbody rb = newFrag.GetComponent<Rigidbody>();
+                if (rb != null) Destroy(rb);
+
                 activeFragments.Add(newFrag);
             }
 
-            // Turn on the visual haze for the 1,500 untracked pieces
             if (untrackedHaze != null) untrackedHaze.Play();
-            
-            Debug.Log($"DebrisClusterManager: Generated {fragmentCount} tracked fragments and activated untracked haze.");
+            Debug.Log($"DebrisClusterManager: Generated {fragmentCount} real-math fragments around Earth.");
         }
     }
 }

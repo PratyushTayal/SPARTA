@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using OrbitGuard.Core;
-using OrbitGuard.Managers;
 using OrbitGuard.Data;
 
 namespace OrbitGuard.Interaction
@@ -16,19 +15,15 @@ namespace OrbitGuard.Interaction
         public Transform railEnd;
 
         [Header("Time Mapping")]
-        [Tooltip("Simulation seconds represented by the rail's start (usually 0 = CDM epoch).")]
         public double timeAtRailStart = 0.0;
-
-        [Tooltip("Simulation seconds represented by the rail's end — the bible's ~48-hour look-ahead window.")]
         public double timeAtRailEnd = 48.0 * 3600.0;
 
         [Header("References for Live Collision Preview")]
-        public OrbitPropagator primaryOrbitPropagator;
-        public OrbitPropagator debrisOrbitPropagator;
-        public ConjunctionData activeCdm;
+        public Transform primaryTransform;
+        public Transform debrisTransform;
+        public ConjunctionData activeCdm; // Kept so ConjunctionManager can still push data to it safely
 
         [Header("Visual Feedback")]
-        [Tooltip("Optional — a material/renderer whose color reflects current risk while scrubbing, e.g. the handle itself flashing red near TCA.")]
         public Renderer handleRenderer;
         public Color safeColor = new Color(0.18f, 0.8f, 0.44f);
         public Color dangerColor = new Color(0.91f, 0.3f, 0.24f);
@@ -63,9 +58,6 @@ namespace OrbitGuard.Interaction
                 wasAutoPlaying = TimeController.Instance.IsPlaying;
                 TimeController.Instance.IsPlaying = false;
             }
-
-            if (TelemetryStateManager.Instance != null)
-                TelemetryStateManager.Instance.BeginCounterfactualExploration();
         }
 
         private void OnGrabEnd(SelectExitEventArgs args)
@@ -93,28 +85,19 @@ namespace OrbitGuard.Interaction
             double newSimTime = timeAtRailStart + normalized * (timeAtRailEnd - timeAtRailStart);
             TimeController.Instance.SimulationTime = newSimTime;
 
-            UpdateLiveCollisionPreview(newSimTime);
+            UpdateLiveCollisionPreview();
         }
 
-        private void UpdateLiveCollisionPreview(double simTime)
+        private void UpdateLiveCollisionPreview()
         {
-            if (RiskManager.Instance == null || primaryOrbitPropagator == null || debrisOrbitPropagator == null) return;
+            if (primaryTransform == null || debrisTransform == null) return;
 
-            OrbitalElements primaryElements = TelemetryStateManager.Instance != null
-                ? TelemetryStateManager.Instance.CounterfactualTelemetry
-                : primaryOrbitPropagator.currentElements;
-
-            RiskManager.Instance.RecomputeFromLivePositions(
-                activeCdm,
-                primaryElements,
-                debrisOrbitPropagator.currentElements,
-                simTime);
-
+            // The simplified visual check
+            float liveDistance = Vector3.Distance(primaryTransform.position, debrisTransform.position);
+            bool isDanger = liveDistance < 0.3f; // Tune this threshold in the Inspector if needed
+            
             if (handleRenderer != null)
             {
-                double missKm = RiskManager.Instance.CurrentLiveMissDistanceKm;
-                double combinedHbrKm = activeCdm.CombinedHardBodyRadiusMeters() / 1000.0;
-                bool isDanger = missKm < combinedHbrKm * 10.0;
                 handleRenderer.material.color = isDanger ? dangerColor : safeColor;
             }
         }

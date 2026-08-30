@@ -12,8 +12,8 @@ namespace OrbitGuard.Core
         [Tooltip("Is the timeline playing automatically?")]
         public bool IsPlaying = true;
         
-        [Tooltip("How fast time moves (1 = real time, 100 = fast forward)")]
-        public float TimeScale = 100f;
+        [Tooltip("How fast time moves (1 = real time, 10 = fast forward)")]
+        public float TimeScale = 10f; // Set to 10 by default now
 
         private void Awake()
         {
@@ -27,6 +27,12 @@ namespace OrbitGuard.Core
             {
                 SimulationTime += Time.deltaTime * TimeScale;
             }
+        }
+
+        // NEW: Allows a UI button to pause/unpause the simulation
+        public void TogglePlay() 
+        { 
+            IsPlaying = !IsPlaying; 
         }
     }
 }
