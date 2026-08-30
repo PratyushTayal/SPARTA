@@ -1240,6 +1240,7 @@ MonoBehaviour:
     meanAnomalyAtEpoch: 0
     epoch: 0
     mu: 0
+  visualBody: {fileID: 0}
   displayMode: 0
   relativeReference: {fileID: 0}
   resolution: 128
@@ -1699,6 +1700,7 @@ MonoBehaviour:
     meanAnomalyAtEpoch: 0
     epoch: 0
     mu: 0
+  visualBody: {fileID: 494932178}
   displayMode: 0
   relativeReference: {fileID: 0}
   resolution: 128
@@ -3777,8 +3779,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   macroSatellite: {fileID: 2088868315}
   macroDebris: {fileID: 613301528}
-  encounterSatellite: {fileID: 2088868315}
-  encounterDebris: {fileID: 613301528}
+  encounterSatellite: {fileID: 0}
+  encounterDebris: {fileID: 0}
   commandConsole: {fileID: 0}
   vectorGrabController: {fileID: 1811988408}
   timelineScrubber: {fileID: 1834429196}
@@ -3969,6 +3971,7 @@ MonoBehaviour:
     meanAnomalyAtEpoch: 0
     epoch: 0
     mu: 0
+  visualBody: {fileID: 1376525478}
   displayMode: 0
   relativeReference: {fileID: 0}
   resolution: 128
