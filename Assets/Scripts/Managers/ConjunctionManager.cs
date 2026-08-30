@@ -55,11 +55,16 @@ namespace OrbitGuard.Managers
 
             if (CdmParser.TryParseKvn(rawText, 0, out ConjunctionData cdmData, out string error))
             {
-                // --- THE BUG KILLER ---
-                // Re-anchor the massive Unix timestamp down to exactly 24 hours (86400 seconds).
-                // This makes the TCA easily reachable using your physical fast-forward button.
+                // Anchor the time
                 cdmData.tcaSeconds = 86400.0;
-                // ----------------------
+                
+                // --- THE NEW FIX ---
+                // Tell the TimeController exactly when the collision happens so it can slow down!
+                if (TimeController.Instance != null)
+                {
+                    TimeController.Instance.criticalEventTimeSeconds = cdmData.tcaSeconds;
+                }
+                // -------------------
 
                 Debug.Log($"SUCCESS: Loaded CDM for {cdmData.object1.objectName} vs {cdmData.object2.objectName}. TCA re-anchored to {cdmData.tcaSeconds}s.");
 
