@@ -2053,7 +2053,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6990359736870322436, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.044999987
+      value: 0.045000136
       objectReference: {fileID: 0}
     - target: {fileID: 6990359736870322436, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2065,7 +2065,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7125158007751915764, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.044999987
+      value: 0.045000136
       objectReference: {fileID: 0}
     - target: {fileID: 7125158007751915764, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2117,7 +2117,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8606332522517342525, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.044999987
+      value: 0.045000136
       objectReference: {fileID: 0}
     - target: {fileID: 8606332522517342525, guid: c2438e15d3d8efa499e63e3f2a76f3eb, type: 3}
       propertyPath: m_LocalPosition.z
@@ -2550,7 +2550,7 @@ MonoBehaviour:
   - {fileID: 3296659852987854063, guid: 310b09f2e6e2aa0479476f8f5172f468, type: 3}
   spawnParent: {fileID: 731010844}
   untrackedHaze: {fileID: 0}
-  fragmentCount: 100
+  fragmentCount: 50
   fragmentVisualScale: 0.4
   minSizeMultiplier: 0.2
   maxSizeMultiplier: 0.7
@@ -3196,9 +3196,6 @@ MonoBehaviour:
   debrisMesh: {fileID: 494932178}
   tcaSeconds: 0
   collisionThresholdUnits: 0.05
-  collisionVfxPrefab: {fileID: 0}
-  collisionAudio: {fileID: 0}
-  safePassageAudio: {fileID: 0}
 --- !u!1 &1644447676
 GameObject:
   m_ObjectHideFlags: 0
