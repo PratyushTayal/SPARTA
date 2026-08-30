@@ -2181,6 +2181,87 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1235471235}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1260963116
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1260963118}
+  - component: {fileID: 1260963117}
+  m_Layer: 0
+  m_Name: Debrisspawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1260963117
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260963116}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f875e69354e8504ea317b94fa08294f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  earth: {fileID: 2040015316}
+  debrisTypes:
+  - prefab: {fileID: 7364222979250853646, guid: 8e95667127d42ec408e20b50e4a98f8a, type: 3}
+    count: 50
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 4610675382041204581, guid: abd1e6e4a1b68b44d9d62d9da41c4501, type: 3}
+    count: 50
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 9216028174848736296, guid: 0266bc588152b314f9e08affda6ad99f, type: 3}
+    count: 50
+    scaleRange: {x: 0.5, y: 0.2}
+  - prefab: {fileID: 1738899040806945955, guid: cc2bf72ce953b0043ad4ea5e24c95709, type: 3}
+    count: 60
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 9089482030950498502, guid: 78b8ec410b81e174abaa0d9523a7e6f0, type: 3}
+    count: 100
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 8964461770483216189, guid: afba0b87406c9764795e29c6cc6864bf, type: 3}
+    count: 20
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 2741392067961749748, guid: 0a536317dfb68324eabab4db530572f0, type: 3}
+    count: 20
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 319908825727868373, guid: 6720bba4640daf94ca420daef3b37837, type: 3}
+    count: 20
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 3793523495469464399, guid: 970a5827d666ba842bfd7686860c36eb, type: 3}
+    count: 10
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 563350214943639086, guid: 23c9b6c2139f27b4cb3be57643bf8c7f, type: 3}
+    count: 20
+    scaleRange: {x: 0.02, y: 0.02}
+  - prefab: {fileID: 4034200145479480984, guid: cdd063f17652b794aadc71beccd5da6e, type: 3}
+    count: 20
+    scaleRange: {x: 0.02, y: 0.02}
+  orbitRadiusMultiplierRange: {x: 1.5, y: 4}
+  orbitSpeedRange: {x: 5, y: 40}
+--- !u!4 &1260963118
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1260963116}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.5433247, y: 0.46452403, z: 2.7825444}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1308805226
 GameObject:
   m_ObjectHideFlags: 0
@@ -8287,3 +8368,4 @@ SceneRoots:
   - {fileID: 64611683}
   - {fileID: 461125867}
   - {fileID: 1327220454}
+  - {fileID: 1260963118}
